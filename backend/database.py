@@ -44,26 +44,49 @@ def get_db():
 
 
 def ensure_schema():
-    """Ensure all required tables, columns, and initial records exist in SQLite database."""
+    """Ensure all required tables, columns, and initial records exist.
+    Supports both SQLite (local dev) and PostgreSQL (production).
+    """
     import models
     import auth
 
+    # Create all tables from SQLAlchemy models (works for both SQLite and PostgreSQL)
     Base.metadata.create_all(bind=engine)
+
+    is_sqlite = DATABASE_URL.startswith("sqlite")
+
     with engine.connect() as conn:
-        # Check and add nullable columns to queue_entries if missing
-        cursor = conn.execute(text("PRAGMA table_info(queue_entries)"))
-        existing_cols = {row[1] for row in cursor.fetchall()}
-        
-        if "served_at" not in existing_cols:
+        if is_sqlite:
+            # SQLite: use PRAGMA to check existing columns before adding
+            cursor = conn.execute(text("PRAGMA table_info(queue_entries)"))
+            existing_cols = {row[1] for row in cursor.fetchall()}
+
+            if "served_at" not in existing_cols:
+                try:
+                    conn.execute(text("ALTER TABLE queue_entries ADD COLUMN served_at DATETIME"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+            if "completed_at" not in existing_cols:
+                try:
+                    conn.execute(text("ALTER TABLE queue_entries ADD COLUMN completed_at DATETIME"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+            if "doctor_id" not in existing_cols:
+                try:
+                    conn.execute(text("ALTER TABLE queue_entries ADD COLUMN doctor_id INTEGER REFERENCES doctors(id)"))
+                    conn.commit()
+                except Exception:
+                    pass
+        else:
+            # PostgreSQL: use ADD COLUMN IF NOT EXISTS (safe to run repeatedly)
             try:
-                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN served_at DATETIME"))
-                conn.commit()
-            except Exception:
-                pass
-                
-        if "completed_at" not in existing_cols:
-            try:
-                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN completed_at DATETIME"))
+                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS served_at TIMESTAMP"))
+                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP"))
+                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS doctor_id INTEGER REFERENCES doctors(id)"))
                 conn.commit()
             except Exception:
                 pass
