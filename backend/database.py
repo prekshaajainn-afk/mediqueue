@@ -12,9 +12,12 @@ DB_PATH = os.path.join(BASE_DIR, "mediqueue.db")
 # ------------------------------------------------------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
-    # Supabase/Heroku sometimes provide postgres:// — SQLAlchemy needs postgresql://
+    # Force SQLAlchemy to use psycopg2 driver explicitly (not psycopg3).
+    # SQLAlchemy 2.x defaults to psycopg3 with generic postgresql://, so we pin the dialect.
     if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 else:
     DATABASE_URL = f"sqlite:///{DB_PATH}"
 
