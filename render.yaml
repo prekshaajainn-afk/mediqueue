@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: mediqueue-backend
+    env: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false   # Paste your Supabase PostgreSQL URL in Render dashboard
+      - key: MEDIQUEUE_SECRET_KEY
+        sync: false   # Set a strong random secret key in Render dashboard
+      - key: FRONTEND_URL
+        sync: false   # Paste your Vercel frontend URL after it deploys
