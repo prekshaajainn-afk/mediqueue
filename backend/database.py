@@ -91,13 +91,6 @@ def ensure_schema():
             except Exception:
                 pass
 
-        if "doctor_id" not in existing_cols:
-            try:
-                conn.execute(text("ALTER TABLE queue_entries ADD COLUMN doctor_id INTEGER REFERENCES doctors(id)"))
-                conn.commit()
-            except Exception:
-                pass
-
     # Seed initial doctors and demo accounts if not already present
     db = SessionLocal()
     try:
